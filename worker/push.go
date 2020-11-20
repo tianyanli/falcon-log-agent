@@ -176,11 +176,14 @@ func ToPushQueue(strategy *scheme.Strategy, tms int64, pointMap map[string]*Poin
 			tags = utils.DictedTagstring(tagstring)
 		}
 
-		hostname, err := utils.GetEndpoint(g.Conf().Endpoint)
-		if err != nil {
+		//hostname, err := utils.GetEndpoint(g.Conf().Endpoint)
+		hostname := fmt.Sprintf(g.Conf().Endpoint)
+		//hostname, err := fmt.Sprintf(g.Conf().Endpoint)
+		/*if err != nil {
 			dlog.Errorf("cannot get hostname : %v", err)
 			return err
 		}
+		*/
 
 		if math.IsNaN(value) {
 			continue
@@ -188,7 +191,7 @@ func ToPushQueue(strategy *scheme.Strategy, tms int64, pointMap map[string]*Poin
 
 		tmpPoint := &FalconPoint{
 			Endpoint:    hostname,
-			Metric:      strategy.Name,
+			Metric:      "log."+ strategy.Name,
 			Timestamp:   tms,
 			Step:        strategy.Interval,
 			Value:       value,

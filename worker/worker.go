@@ -5,6 +5,7 @@ import (
 	"math"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -237,6 +238,8 @@ func (w *Worker) producer(line string, strategy *scheme.Strategy) (*AnalysPoint,
 	// [风险]统一使用东八区
 	loc, err := time.LoadLocation("Asia/Shanghai")
 	tms, err := time.ParseInLocation(timeFormat, t, loc)
+	dlog.Debugf("日志获取到的时间： %v",t)
+	dlog.Debugf("日志时间转换为tms时间： %v",tms)
 	if err != nil {
 		return nil, err
 	}
@@ -271,28 +274,47 @@ func (w *Worker) producer(line string, strategy *scheme.Strategy) (*AnalysPoint,
 	var patternReg, excludeReg *regexp.Regexp
 	var value float64
 	patternReg = strategy.PatternReg
+	dlog.Debugf("用户正则表达式： %v",patternReg)
 	if patternReg != nil {
+		hostname := fmt.Sprintf("v%",patternReg)
 		v := patternReg.FindStringSubmatch(line)
 		var vString string
 		if v != nil && len(v) != 0 {
 			if len(v) > 1 {
 				vString = v[1]
+				dlog.Debugf("用户正则匹配返回完全匹配和局部匹配的字符串： %v",v)
+				dlog.Debugf("用户正则匹配返回完全匹配和局部匹配的被匹配行： %v",line)
+				dlog.Debugf("用户正则匹配返回完全匹配和局部匹配的vString： %v",vString)
+
 			} else {
 				vString = ""
 			}
 			value, err = strconv.ParseFloat(vString, 64)
+			dlog.Debugf("用户正则转换vString是否存在err： %v",err)
 			if err != nil {
 				value = math.NaN()
+				//value = -1
 			}
 		} else {
 			//外边匹配err之后，要确保返回值不是nil再推送至counter
 			//正则有表达式，没匹配到，直接返回
-			return nil, nil
+			//return nil, nil
+			//https://www.nhooo.com/golang/go-given-characters-in-string.html
+			if strings.Contains(hostname, "d+") {
+				dlog.Debugf("用户正则匹配到的字符串包含d+,字符串是： %v",hostname)
+				return nil, nil
+
+			} else {
+				value = -1
+			}
+			
+			//匹配不到将每次的值置为-1
 		}
 
 	} else {
 		value = math.NaN()
 	}
+	dlog.Debugf("用户正则value： %v",value)
 
 	//处理exclude
 	excludeReg = strategy.ExcludeReg
@@ -324,9 +346,11 @@ func (w *Worker) producer(line string, strategy *scheme.Strategy) (*AnalysPoint,
 	ret := &AnalysPoint{
 		StrategyID: strategy.ID,
 		Value:      value,
-		Tms:        tms.Unix(),
+		//Tms:        tms.Unix(),
+		Tms:    time.Now().Unix(),
 		Tags:       tag,
 	}
+	dlog.Debugf("匹配完成后塞入ret的值： %v",ret)
 	return ret, nil
 }
 

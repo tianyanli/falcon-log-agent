@@ -183,6 +183,10 @@ func (pc *PointsCounter) Update(tagstring string, value float64) error {
 		tmp := new(PointCounter)
 		tmp.Count = 0
 		tmp.Sum = 0
+
+		if value == -1 {
+			tmp.Sum = math.NaN() //补零逻辑，不处理Sum
+		}
 		tmp.Max = math.NaN()
 		tmp.Min = math.NaN()
 		pc.TagstringMap[tagstring] = tmp
@@ -196,14 +200,26 @@ func (pc *PointsCounter) Update(tagstring string, value float64) error {
 	}
 
 	pointCount.Lock()
-	pointCount.Count = pointCount.Count + 1
+
+	if value == -1 {
+		//如果匹配不到默认将值置为-1，判断当值等于-1那么统计时候cnt为0，sum为-1
+		pointCount.Count = 0
+		//pointCount.Sum = -1
+	}
+	if value != -1 {
+		//如果匹配不到默认将值置为-1，判断当值不等于-1那么统计时候正常处理
+
 	pointCount.Sum = pointCount.Sum + value
+	pointCount.Count = pointCount.Count + 1
 	if math.IsNaN(pointCount.Max) || value > pointCount.Max {
 		pointCount.Max = value
 	}
 	if math.IsNaN(pointCount.Min) || value < pointCount.Min {
 		pointCount.Min = value
 	}
+	}
+
+
 	pointCount.Unlock()
 
 	return nil
